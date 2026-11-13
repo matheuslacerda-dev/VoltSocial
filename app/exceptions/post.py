@@ -1,0 +1,2 @@
+class InvalidPostTitleError(Exception):
+    pass

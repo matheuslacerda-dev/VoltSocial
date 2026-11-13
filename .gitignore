@@ -1,0 +1,5 @@
+.env
+.pytest_cache
+.pytest
+__pycache__
+*.db
