@@ -3,8 +3,15 @@ import asyncio
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import (
+    DUMMY_PASSWORD_HASH,
+    create_access_token,
+    hash_password,
+    verify_password,
+)
+from app.exceptions.auth import InvalidCredentialsError
 from app.exceptions.user import UserAlreadyExistsError
+from app.models.enums import UserStatus
 from app.models.user import User
 from app.repositories.user import UserRepository
 from app.schemas.user import UserCreate
@@ -73,3 +80,22 @@ class AuthService:
             "constraint_name",
             None,
         )
+
+    async def login(self, email: str, password: str) -> str:
+        user = await self.repository.get_by_email(email)
+
+        hashed = user.password_hash if user else DUMMY_PASSWORD_HASH
+
+        password_ok = await asyncio.to_thread(
+            verify_password,
+            password,
+            hashed,
+        )
+
+        if user is None or not password_ok:
+            raise InvalidCredentialsError()
+
+        if user.status != UserStatus.ACTIVE:
+            raise InvalidCredentialsError()
+
+        return create_access_token(str(user.id))

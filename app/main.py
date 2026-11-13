@@ -3,7 +3,9 @@ from fastapi import FastAPI
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.lifespan import lifespan
+from app.exceptions.auth import InvalidCredentialsError
 from app.exceptions.handlers import (
+    invalid_credentials_handler,
     invalid_post_title_handler,
     user_already_exists_handler,
     user_not_found_handler,
@@ -30,6 +32,10 @@ app.add_exception_handler(
 app.add_exception_handler(
     UserAlreadyExistsError,
     user_already_exists_handler,
+)
+app.add_exception_handler(
+    InvalidCredentialsError,
+    invalid_credentials_handler,
 )
 app.include_router(api_router)
 
