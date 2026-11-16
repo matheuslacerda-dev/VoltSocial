@@ -1,3 +1,4 @@
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 
 import jwt
@@ -5,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.permissions import Permission, has_permission
 from app.core.security import decode_access_token
 from app.db.session import get_db_session
 from app.exceptions.user import UserNotFoundError
@@ -18,6 +20,11 @@ from app.services.user import UserService
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
+DbSessionDep = Annotated[
+    AsyncSession,
+    Depends(get_db_session),
+]
+
 
 def get_post_service() -> PostService:
     return PostService()
@@ -26,10 +33,6 @@ def get_post_service() -> PostService:
 PostServiceDep = Annotated[
     PostService,
     Depends(get_post_service),
-]
-DbSessionDep = Annotated[
-    AsyncSession,
-    Depends(get_db_session),
 ]
 
 
@@ -126,3 +129,17 @@ AuthServiceDep = Annotated[
     AuthService,
     Depends(get_auth_service),
 ]
+
+
+def require_permission(
+    permission: Permission,
+) -> Callable[..., Awaitable[User]]:
+    async def checker(current_user: CurrentUserDep) -> User:
+        if not has_permission(current_user.role, permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to perform this action.",
+            )
+        return current_user
+
+    return checker

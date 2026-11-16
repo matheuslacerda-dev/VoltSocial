@@ -1,6 +1,9 @@
 from fastapi import APIRouter, status
+from fastapi.param_functions import Depends
 
-from app.api.dependencies import AuthServiceDep, CurrentUserDep
+from app.api.dependencies import AuthServiceDep, CurrentUserDep, require_permission
+from app.core.permissions import Permission
+from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenResponse
 from app.schemas.user import UserCreate, UserRead
 
@@ -69,3 +72,10 @@ async def logout(
     auth_service: AuthServiceDep,
 ) -> None:
     await auth_service.logout(data.refresh_token)
+
+
+@router.get("/_tmp/author-only")
+async def tmp_author_only(
+    user: User = Depends(require_permission(Permission.POST_CREATE)),
+):
+    return {"ok": True, "role": user.role}
